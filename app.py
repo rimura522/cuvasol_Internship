@@ -49,8 +49,8 @@ def extract_skills(resume_path):
                 languages_section = languages_match.group(1)
                 extracted_languages = re.findall(r'\b[A-Z][A-Z ]*[A-Z]\b', languages_section)
                 languages.extend(lang.strip() for lang in extracted_languages if len(lang) < 30)
-
-    return list(set(skills)), list(set(languages))
+    
+    return list(set(skills))+ list(set(languages))
 
 @app.route('/')
 def index():
@@ -67,14 +67,13 @@ def upload_resume():
         file.save(filepath)
         
         # Process the resume file and extract skills
-        skills, languages = extract_skills(filepath)
+        skills= extract_skills(filepath)
         
         save_skills(name, skills)
         
         return jsonify({
             'message': 'Resume uploaded successfully',
-            'skills': skills,
-            'languages': languages
+            'skills': skills
         })
     return jsonify({'message': 'Invalid file format, only PDF is allowed'}), 400
 
