@@ -3,16 +3,20 @@ import mysql.connector
 import fitz
 import os
 import re
+import math
 
 app = Flask(__name__)
-UPLOAD_FOLDER = r'D:\rahul1\internship(cuvasol)\Cooked\Cooked\HellaCooked\resumes'
+UPLOAD_FOLDER = r'C:\CUVASOLInternship\cuvasol_Internship-master\resumes'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Store job descriptions in-memory for simplicity
+job_descriptions = {}
 
 def get_db_connection():
     conn = mysql.connector.connect(
-        host="localhost",
+        host="127.0.0.1",
         user="root",
-        password="Asqw123$",
+        password="2711",
         database="skills",
     )
     return conn
@@ -43,35 +47,36 @@ def extract_skills(resume_path):
             languages_match = re.search(r'LANGUAGES(.*?)(?:\n\n|\nEDUCATION|\nEXPERIENCE|\nHOBBIES|\nCERTIFICATIONS|\nSUMMARY|\nCERTIFICATES|\nINTERESTS|\nPROFILES|\nPROJECTS|$)', text, re.DOTALL)
             if languages_match:
                 languages_section = languages_match.group(1)
-                extracted_languages = re.findall(r'\b[A-Z]+\b', languages_section)
+                extracted_languages = re.findall(r'\b[A-Z][A-Z ]*[A-Z]\b', languages_section)
                 languages.extend(lang.strip() for lang in extracted_languages if len(lang) < 30)
 
-    return skills + languages
+    return list(set(skills)), list(set(languages))
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/upload', methods=['POST'])
-def upload_file():
-    if 'file' not in request.files or 'name' not in request.form:
-        return jsonify({'error': 'No file or name part'})
+def upload_resume():
+    name = request.form['name']
     file = request.files['file']
     
-    name = request.form['name']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'})
-    if file and allowed_file(file.filename):
-        filename = f"{name}_resume.pdf"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
+    if file and file.filename.endswith('.pdf'):
+        filename = f"{name}_{file.filename}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
         
-        skills = extract_skills(file_path)
+        # Process the resume file and extract skills
+        skills, languages = extract_skills(filepath)
+        
         save_skills(name, skills)
-        return jsonify({'skills': skills})
-    else:
-        return jsonify({'error': 'Invalid file format'})
-
+        
+        return jsonify({
+            'message': 'Resume uploaded successfully',
+            'skills': skills,
+            'languages': languages
+        })
+    return jsonify({'message': 'Invalid file format, only PDF is allowed'}), 400
 
 @app.route('/view_table', methods=['GET'])
 def view_table():
@@ -90,22 +95,34 @@ def view_table():
     for row in rows:
         name = row[0]
         skills = row[1].split(', ')
-        #rating = request.args.get('rating', 0)
         table_data["data"].append({"Applicant Name": name, "Skills": ', '.join(skills)})
-
-    #table_data["data"].sort(key=lambda x: x["Rating"], reverse=True)
 
     return jsonify(table_data)
 
+@app.route('/create_job_description', methods=['POST'])
+def create_job_description():
+    data = request.get_json()
+    job_title = data.get('jobTitle')
+    job_description = data.get('jobDescription')
+    
+    if job_title and job_description:
+        job_descriptions[job_title] = job_description
+        return jsonify({'message': 'Job description created successfully'})
+    return jsonify({'message': 'Invalid input'}), 400
+
+@app.route('/get_job_titles', methods=['GET'])
+def get_job_titles():
+    return jsonify({'jobTitles': list(job_descriptions.keys())})
+
 @app.route('/match_job_description', methods=['POST'])
 def match_job_description():
-    job_description = request.form.get('description', '')
-    if not job_description:
-        return jsonify({'error': 'No job description provided'})
+    data = request.get_json()
+    job_title = data.get('jobTitle', '')
+    if not job_title:
+        return jsonify({'error': 'No job title provided'})
 
+    job_description = job_descriptions.get(job_title, '')
     job_keywords = extract_keywords_from_text(job_description)
-
-    
 
     if not job_keywords:
         return jsonify({'error': 'No keywords extracted from job description'})
@@ -121,27 +138,48 @@ def match_job_description():
         cursor.execute(query, params)
         rows = cursor.fetchall()
     except mysql.connector.Error as err:
-        return jsonify({'error': str(err)})
+        return jsonify({'error': str(err)}), 500
     finally:
         cursor.close()
         conn.close()
-    
+
     matching_resumes = []
     for row in rows:
         name = row[0]
         skills = row[1].split(', ')
         matched_skills = set(job_keywords) & set(skills)
-        rating = len(matched_skills)/len(job_keywords) * 100
+        rating = len(matched_skills) / len(job_keywords) * 100
+        rating = math.ceil(rating)
         matching_resumes.append({"name": name, "skills": ', '.join(skills), "rating": rating})
+        
 
     matching_resumes.sort(key=lambda x: x["rating"], reverse=True)
 
     return jsonify({'matching_resumes': matching_resumes})
 
+
 @app.route('/view_resume/<name>', methods=['GET'])
 def view_resume(name):
     resume_filename = f"{name}_resume.pdf"
     return send_from_directory(app.config['UPLOAD_FOLDER'], resume_filename)
+
+@app.route('/view_roles', methods=['GET'])
+def view_roles():
+    return jsonify(job_descriptions)
+
+@app.route('/update_role', methods=['POST'])
+def update_role():
+    data = request.get_json()
+    old_title = data.get('oldTitle')
+    new_title = data.get('newTitle')
+    new_description = data.get('newDescription')
+    
+    if old_title in job_descriptions:
+        job_descriptions[new_title] = new_description
+        if old_title != new_title:
+            del job_descriptions[old_title]
+        return jsonify({'message': 'Role updated successfully'})
+    return jsonify({'message': 'Role not found'}), 404
 
 def save_skills(name, skills):
     conn = get_db_connection()
