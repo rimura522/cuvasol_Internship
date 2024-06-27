@@ -102,6 +102,35 @@
         #jobDescriptionSection {
             display: none;
         }
+        .progress {
+            height: 20px;
+            background-color: #f4f4f4;
+            position: relative;
+        }
+        .progress-bar {
+            height: 100%;
+            transition: width 0.6s ease;
+            color: black;
+            font-weight: bold; /* Ensure the text color contrasts well with the background */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .progress-bar.red {
+            background: linear-gradient(to right, red, red);
+        }
+        .progress-bar.yellow {
+            background: linear-gradient(to right, yellow, yellow);
+        }
+        .progress-bar.green {
+            background: linear-gradient(to right, green, green);
+        }
+        .rating-number {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 25px; /* Adjust as necessary to place below the progress bar */
+        }
     </style>
 </head>
 <body>
@@ -227,8 +256,6 @@
             }
     
             function updateTable(columns, data) {
-                
-                //columns.push("Rating");
                 data.sort((a, b) => b.Rating - a.Rating);
                 var tableHtml = '<table class="table table-bordered"><thead><tr>';
                 columns.forEach(function(col) {
@@ -238,7 +265,17 @@
                 data.forEach(function(row) {
                     tableHtml += '<tr>';
                     columns.forEach(function(col) {
-                        tableHtml += '<td>' + (row[col] || '') + '</td>';
+                        if (col === "Rating") {
+                            var rating = row[col];
+                            var ratingClass = rating < 40 ? 'red' : (rating <= 75 ? 'yellow' : 'green');
+                            tableHtml += '<td>' +
+                                '<div class="progress">' +
+                                '<div class="progress-bar ' + ratingClass + '" role="progressbar" style="width: ' + rating + '%;" aria-valuenow="' + rating + '" aria-valuemin="0" aria-valuemax="100">' + rating + '%</div>' +
+                                '</div>' +
+                                '</td>';
+                        } else {
+                            tableHtml += '<td>' + (row[col] || '') + '</td>';
+                        }
                     });
                     tableHtml += '</tr>';
                 });
@@ -246,11 +283,10 @@
                 $('#tableContainer').html(tableHtml);
             }
     
-            // Load the table data when the "View Table" tab is clicked
             $('#viewTable-tab').on('click', function() {
                 loadTableData();
             });
-            
+    
             $('#admin-tab').on('click', function() {
                 $('#matchJob-tab').tab('show');
             });
@@ -269,7 +305,14 @@
                             var html = '<div class="alert alert-success">Matching applicants:</div>';
                             html += '<table class="table table-striped"><thead><tr><th>Name</th><th>Resume</th><th>Rating %</th></tr></thead><tbody>';
                             response.matching_resumes.forEach(function(resume) {
-                                html += `<tr><td>${resume.name}</td><td><a href="/view_resume/${resume.name}" target="_blank" class="btn btn-info btn-sm">View Resume</a></td><td>${resume.rating}</td></tr>`;
+                                var rating = resume.rating;
+                                var ratingClass = rating < 40 ? 'red' : (rating <= 75 ? 'yellow' : 'green');
+                                html += `<tr><td>${resume.name}</td><td><a href="/view_resume/${resume.name}" target="_blank" class="btn btn-info btn-sm">View Resume</a></td>`;
+                                html += `<td>
+                                            <div class="progress">
+                                                <div class="progress-bar ${ratingClass}" role="progressbar" style="width: ${rating}%;" aria-valuenow="${rating}" aria-valuemin="0" aria-valuemax="100">${rating}%</div>
+                                            </div>
+                                         </td></tr>`;
                             });
                             html += '</tbody></table>';
                             $('#matchResponse').html(html);
@@ -283,5 +326,6 @@
             });
         });
     </script>
+
 </body>
 </html>
