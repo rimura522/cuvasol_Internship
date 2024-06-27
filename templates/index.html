@@ -391,24 +391,6 @@
                 });
             });
             
-            $("#uploadForm").submit(function (event) {
-                event.preventDefault();
-                const formData = new FormData(this);
-            
-                $.ajax({
-                    url: "/upload",
-                    method: "POST",
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function (response) {
-                        $("#response").html(`<div class="alert alert-success">${response.message}</div>`);
-                    },
-                    error: function (error) {
-                        $("#response").html(`<div class="alert alert-danger">Error uploading resume</div>`);
-                    }
-                });
-            });
 
             // Load job titles on page load
             loadJobTitles();
