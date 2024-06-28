@@ -145,17 +145,21 @@ def match_job_description():
     matching_resumes = []
     for row in rows:
         name = row[0]
-        skills = row[1].split(', ')
-        matched_skills = set(job_keywords) & set(skills)
-        rating = len(matched_skills) / len(job_keywords) * 100
-        rating = math.ceil(rating)
-        matching_resumes.append({"name": name, "skills": ', '.join(skills), "rating": rating})
+        skills = row[1].split(', ')   
+        seperated=[]
+        for string in skills:
+            seperated.extend(string.split())
+        seperated = ' '.join([str(elem) for elem in seperated])
+        seperated=extract_keywords_from_text(seperated)
+
+        matched_skills = set(job_keywords) & set(seperated)
+
+        rating = len(matched_skills)/(len(set(job_keywords))) * 100
+        rating=math.ceil(rating)
+        matching_resumes.append({"name": name, "skills": ', '.join(seperated), "rating": rating})
         
-
     matching_resumes.sort(key=lambda x: x["rating"], reverse=True)
-
     return jsonify({'matching_resumes': matching_resumes})
-
 
 @app.route('/view_resume/<name>', methods=['GET'])
 def view_resume(name):
