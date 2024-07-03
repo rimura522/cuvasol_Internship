@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -102,6 +103,35 @@
         #jobDescriptionSection {
             display: none;
         }
+        .progress {
+            height: 20px;
+            background-color: #f4f4f4;
+            position: relative;
+        }
+        .progress-bar {
+            height: 100%;
+            transition: width 0.6s ease;
+            color: black;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .progress-bar.red {
+            background: linear-gradient(to right, red, red);
+        }
+        .progress-bar.yellow {
+            background: linear-gradient(to right, yellow, yellow);
+        }
+        .progress-bar.green {
+            background: linear-gradient(to right, green, green);
+        }
+        .rating-number {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            top: 25px;
+        }
     </style>
 </head>
 <body>
@@ -109,7 +139,6 @@
     <img src="static/logo.png" alt="Logo" id="logo" class="img-fluid">
     
     <div class="container">
-        <!-- Navigation tabs -->
         <ul class="nav nav-tabs" id="myTab" role="tablist">
             <li class="nav-item">
                 <a class="nav-link active" id="upload-tab" data-toggle="tab" href="#upload" role="tab" aria-controls="upload" aria-selected="true">User</a>
@@ -119,9 +148,7 @@
             </li>
         </ul>
 
-        <!-- Tab panes -->
         <div class="tab-content">
-            <!-- Upload Resume Tab -->
             <div class="tab-pane fade show active" id="upload" role="tabpanel" aria-labelledby="upload-tab">
                 <div class="row">
                     <div class="col-md-12">
@@ -144,7 +171,6 @@
                 </div>
             </div>
 
-            <!-- Admin Tab with Sub-tabs -->
             <div class="tab-pane fade" id="admin" role="tabpanel" aria-labelledby="admin-tab">
                 <ul class="nav nav-pills mt-3" id="adminSubTabs" role="tablist">
                     <li class="nav-item">
@@ -152,6 +178,12 @@
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" id="matchJob-tab" data-toggle="pill" href="#matchJob" role="tab" aria-controls="matchJob" aria-selected="false">Match Job Description</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="createJobDescription-tab" data-toggle="pill" href="#createJobDescription" role="tab" aria-controls="createJobDescription" aria-selected="false">Create Job Description</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" id="manage-roles-tab" data-toggle="tab" href="#manage-roles" role="tab" aria-controls="manage-roles" aria-selected="false">Manage Roles</a>
                     </li>
                 </ul>
                 <div class="tab-content mt-3">
@@ -175,8 +207,10 @@
                                     <h1 class="text-center"><br>Match Job Description</h1>
                                     <form id="matchForm">
                                         <div class="form-group">
-                                            <label for="description">Job Description:</label>
-                                            <textarea class="form-control" id="description" name="description" rows="5" required></textarea>
+                                            <label for="jobTitle">Job Title:</label>
+                                            <select class="form-control" id="jobTitle" name="jobTitle" required>
+                                                <!-- Options will be populated dynamically -->
+                                            </select>
                                         </div>
                                         <div class="btn-group">
                                             <button type="submit" class="btn btn-primary">Match</button>
@@ -187,35 +221,80 @@
                             </div>
                         </div>
                     </div>
+                    <div class="tab-pane fade" id="createJobDescription" role="tabpanel" aria-labelledby="createJobDescription-tab">
+                        <div class="row mt-5">
+                            <div class="col-md-12">
+                                <h1 class="text-center">Create Job Description</h1>
+                                <form id="createJobForm">
+                                    <div class="form-group">
+                                        <label for="jobTitle">Job Title:</label>
+                                        <input type="text" class="form-control" id="jobTitleInput" name="jobTitle" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="jobDescription">Job Description:</label>
+                                        <textarea class="form-control" id="jobDescriptionInput" name="jobDescription" rows="5" required></textarea>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button type="submit" class="btn btn-primary">Create</button>
+                                    </div>
+                                </form>
+                                <div id="createJobResponse" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="manage-roles" role="tabpanel" aria-labelledby="manage-roles-tab">
+                        <div class="container mt-4">
+                            <h3 class="text-center">Manage Roles</h3>
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Role Title</th>
+                                        <th>Role Description</th>
+                                        <th>Edit</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rolesTable">
+                                    <!-- Roles will be dynamically inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        $(document).ready(function() {
-            $('#uploadForm').on('submit', function(event) {
+        $(document).ready(function () {
+            // Toggle job description section
+            $("#toggleJobDescription").click(function () {
+                $("#jobDescriptionSection").toggle();
+            });
+
+            $("#uploadForm").submit(function (event) {
                 event.preventDefault();
-                var formData = new FormData(this);
+                const formData = new FormData(this);
+            
                 $.ajax({
-                    url: '/upload',
-                    type: 'POST',
+                    url: "/upload",
+                    method: "POST",
                     data: formData,
-                    contentType: false,
                     processData: false,
-                    success: function(response) {
-                        if (response.error) {
-                            $('#response').html('<div class="alert alert-danger">' + response.error + '</div>');
-                        } else {
-                            $('#response').html('<div class="alert alert-success">Skills extracted: ' + response.skills.join(', ') + '</div>');
-                            updateTable(response.columns, response.data);
-                        }
+                    contentType: false,
+                    success: function (response) {
+                        $("#response").html(`<div class="alert alert-success">${response.message}</div>`);
+                    },
+                    error: function (error) {
+                        $("#response").html(`<div class="alert alert-danger">Error uploading resume</div>`);
                     }
                 });
             });
-    
+            
+
             function loadTableData() {
                 $.ajax({
                     url: '/view_table',
@@ -225,63 +304,158 @@
                     }
                 });
             }
-    
-            function updateTable(columns, data) {
-                
-                //columns.push("Rating");
-                data.sort((a, b) => b.Rating - a.Rating);
-                var tableHtml = '<table class="table table-bordered"><thead><tr>';
-                columns.forEach(function(col) {
-                    tableHtml += '<th>' + col + '</th>';
-                });
-                tableHtml += '</tr></thead><tbody>';
-                data.forEach(function(row) {
-                    tableHtml += '<tr>';
-                    columns.forEach(function(col) {
-                        tableHtml += '<td>' + (row[col] || '') + '</td>';
-                    });
-                    tableHtml += '</tr>';
-                });
-                tableHtml += '</tbody></table>';
-                $('#tableContainer').html(tableHtml);
-            }
-    
-            // Load the table data when the "View Table" tab is clicked
-            $('#viewTable-tab').on('click', function() {
-                loadTableData();
-            });
             
-            $('#admin-tab').on('click', function() {
-                $('#matchJob-tab').tab('show');
-            });
-    
-            $('#matchForm').on('submit', function(event) {
+            function updateTable(columns, data) {
+                const tableContainer = $("#tableContainer");
+                tableContainer.empty();
+            
+                let table = "<table class='table'>";
+                table += "<thead><tr>";
+            
+                columns.forEach(column => {
+                    table += `<th>${column}</th>`;
+                });
+            
+                table += "</tr></thead><tbody>";
+            
+                data.forEach(row => {
+                    table += "<tr>";
+                    columns.forEach(column => {
+                        table += `<td>${row[column]}</td>`;
+                    });
+                    table += "</tr>";
+                });
+            
+                table += "</tbody></table>";
+                tableContainer.append(table);
+            }
+            
+            
+            // Handle job description creation
+            $("#createJobForm").submit(function (event) {
                 event.preventDefault();
-                var formData = $(this).serialize();
+                const jobTitle = $("#jobTitleInput").val();
+                const jobDescription = $("#jobDescriptionInput").val();
+
                 $.ajax({
-                    url: '/match_job_description',
-                    type: 'POST',
-                    data: formData,
-                    success: function(response) {
+                    url: "/create_job_description",
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({
+                        jobTitle: jobTitle,
+                        jobDescription: jobDescription
+                    }),
+                    success: function (response) {
+                        $("#createJobResponse").html(`<div class="alert alert-success">${response.message}</div>`);
+                        $("#jobTitleInput").val('');
+                        $("#jobDescriptionInput").val('');
+                        loadJobTitles();
+                    },
+                    error: function (error) {
+                        $("#createJobResponse").html(`<div class="alert alert-danger">Error creating job description</div>`);
+                    }
+                });
+            });
+
+            // Load job titles into the dropdown
+            function loadJobTitles() {
+                $.ajax({
+                    url: "/get_job_titles",
+                    method: "GET",
+                    success: function (response) {
+                        $("#jobTitle").empty();
+                        response.jobTitles.forEach(function (title) {
+                            $("#jobTitle").append(new Option(title, title));
+                        });
+                    },
+                    error: function (error) {
+                        console.error("Error loading job titles", error);
+                    }
+                });
+            }
+
+            loadTableData();
+
+            // Handle job description matching
+            $("#matchForm").submit(function (event) {
+                event.preventDefault();
+                const jobTitle = $("#jobTitle").val();
+            
+                $.ajax({
+                    url: "/match_job_description",
+                    method: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({ jobTitle: jobTitle }),
+                    success: function (response) {
                         if (response.error) {
                             $('#matchResponse').html('<div class="alert alert-danger">' + response.error + '</div>');
                         } else {
                             var html = '<div class="alert alert-success">Matching applicants:</div>';
                             html += '<table class="table table-striped"><thead><tr><th>Name</th><th>Resume</th><th>Rating %</th></tr></thead><tbody>';
                             response.matching_resumes.forEach(function(resume) {
-                                html += `<tr><td>${resume.name}</td><td><a href="/view_resume/${resume.name}" target="_blank" class="btn btn-info btn-sm">View Resume</a></td><td>${resume.rating}</td></tr>`;
+                                var rating = resume.rating;
+                                var ratingClass = rating < 40 ? 'red' : (rating <= 75 ? 'yellow' : 'green');
+                                html += `<tr><td>${resume.name}</td><td><a href="/view_resume/${resume.name}" target="_blank" class="btn btn-info btn-sm">View Resume</a></td>`;
+                                html += `<td>
+                                            <div class="progress">
+                                                <div class="progress-bar ${ratingClass}" role="progressbar" style="width: ${rating}%;" aria-valuenow="${rating}" aria-valuemin="0" aria-valuemax="100">${rating}%</div>
+                                            </div>
+                                         </td></tr>`;
                             });
                             html += '</tbody></table>';
                             $('#matchResponse').html(html);
                         }
+                    },
+                    error: function (error) {
+                        $("#matchResponse").html(`<div class="alert alert-danger">Error matching job description</div>`);
                     }
                 });
             });
-    
-            $('#toggleJobDescription').on('click', function() {
-                $('#jobDescriptionSection').slideToggle();
+            
+
+            // Load job titles on page load
+            loadJobTitles();
+        });
+        const rolesTable = document.getElementById('rolesTable');
+
+    // Fetch roles and populate the table
+        fetch('/view_roles')
+        .then(response => response.json())
+        .then(roles => {
+            rolesTable.innerHTML = '';
+            roles.forEach(role => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${role[0]}</td>
+                    <td>${role[1]}</td>
+                    <td><button class="btn btn-primary btn-sm edit-role" data-title="${role[0]}" data-description="${role[1]}">Edit</button></td>
+                `;
+                rolesTable.appendChild(row);
+            });
+            document.querySelectorAll('.edit-role').forEach(button => {
+                button.addEventListener('click', function() {
+                    const oldTitle = this.getAttribute('data-title');
+                    const oldDescription = this.getAttribute('data-description');
+                    const newTitle = prompt('Enter new role title:', oldTitle);
+                    const newDescription = prompt('Enter new role description:', oldDescription);
+
+                    if (newTitle && newDescription) {
+                        fetch('/update_role', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ oldTitle, newTitle, newDescription })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            alert(data.message);
+                            location.reload();
+                        });
+                    }
+                });
             });
         });
+
+  
     </script>
 </body>
 </html>
